@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -76,7 +77,20 @@ func receiveMessage(svc *sqs.SQS, input *sqs.ReceiveMessageInput) error {
 	if err != nil {
 		return err
 	}
+
+	if len(msgResult.Messages) == 0 {
+		return errors.New("the specified queue does not return any messages")
+	}
+
 	var stdout io.Writer = os.Stdout
 	json.NewEncoder(stdout).Encode(msgResult)
+
+	_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
+		QueueUrl:      input.QueueUrl,
+		ReceiptHandle: msgResult.Messages[0].ReceiptHandle,
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
