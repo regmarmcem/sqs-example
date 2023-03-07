@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -26,7 +28,7 @@ func main() {
 	}
 	queueURL := os.Getenv("QUEUE_URL")
 
-	res, err := svc.SendMessage(&sqs.SendMessageInput{
+	_, err = svc.SendMessage(&sqs.SendMessageInput{
 		DelaySeconds: aws.Int64(5),
 		MessageAttributes: map[string]*sqs.MessageAttributeValue{
 			"Title": {
@@ -47,7 +49,34 @@ func main() {
 	})
 	if err != nil {
 		fmt.Printf("[err] %v", err)
+		return
 	}
 
-	fmt.Printf("succeed! :%v", res)
+	input := &sqs.ReceiveMessageInput{
+		AttributeNames: []*string{
+			aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
+		},
+		MessageAttributeNames: []*string{
+			aws.String(sqs.QueueAttributeNameAll),
+		},
+		QueueUrl:            &queueURL,
+		MaxNumberOfMessages: aws.Int64(1),
+		VisibilityTimeout:   aws.Int64(5),
+	}
+	err = receiveMessage(svc, input)
+	if err != nil {
+		fmt.Printf("[err] %v", err)
+		return
+	}
+}
+
+func receiveMessage(svc *sqs.SQS, input *sqs.ReceiveMessageInput) error {
+
+	msgResult, err := svc.ReceiveMessage(input)
+	if err != nil {
+		return err
+	}
+	var stdout io.Writer = os.Stdout
+	json.NewEncoder(stdout).Encode(msgResult)
+	return nil
 }
