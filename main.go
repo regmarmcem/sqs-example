@@ -64,22 +64,26 @@ func main() {
 		MaxNumberOfMessages: aws.Int64(1),
 		VisibilityTimeout:   aws.Int64(5),
 	}
-	err = receiveMessage(svc, input)
+	c := make(chan error)
+	go receiveMessage(svc, input, c)
+	err = <-c
 	if err != nil {
 		fmt.Printf("[err] %v", err)
 		return
 	}
 }
 
-func receiveMessage(svc *sqs.SQS, input *sqs.ReceiveMessageInput) error {
+func receiveMessage(svc *sqs.SQS, input *sqs.ReceiveMessageInput, c chan<- error) {
 
 	msgResult, err := svc.ReceiveMessage(input)
 	if err != nil {
-		return err
+		c <- err
+		return
 	}
 
 	if len(msgResult.Messages) == 0 {
-		return errors.New("the specified queue does not return any messages")
+		c <- errors.New("the specified queue does not return any messages")
+		return
 	}
 
 	var stdout io.Writer = os.Stdout
@@ -90,7 +94,6 @@ func receiveMessage(svc *sqs.SQS, input *sqs.ReceiveMessageInput) error {
 		ReceiptHandle: msgResult.Messages[0].ReceiptHandle,
 	})
 	if err != nil {
-		return err
+		c <- err
 	}
-	return nil
 }
