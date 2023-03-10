@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -64,36 +64,57 @@ func main() {
 		MaxNumberOfMessages: aws.Int64(1),
 		VisibilityTimeout:   aws.Int64(5),
 	}
-	c := make(chan error)
-	go receiveMessage(svc, input, c)
-	err = <-c
-	if err != nil {
-		fmt.Printf("[err] %v", err)
-		return
+
+	var stdout io.Writer = os.Stdout
+
+	ch := wrapper(svc, input)
+	for {
+		select {
+		case result := <-ch:
+			if len(result.Messages) == 0 {
+				fmt.Println("empty message")
+				continue
+			}
+			json.NewEncoder(stdout).Encode(result.Messages[0])
+
+			_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
+				QueueUrl:      input.QueueUrl,
+				ReceiptHandle: result.Messages[0].ReceiptHandle,
+			})
+			if err != nil {
+				fmt.Printf("[err] %v", err)
+			}
+			return
+		case <-time.After(1 * time.Second):
+			fmt.Println("time out")
+			return
+		}
 	}
 }
 
-func receiveMessage(svc *sqs.SQS, input *sqs.ReceiveMessageInput, c chan<- error) {
+func wrapper(svc *sqs.SQS, input *sqs.ReceiveMessageInput) <-chan *sqs.ReceiveMessageOutput {
+	ch := make(chan *sqs.ReceiveMessageOutput)
+	go func() {
+		for {
+			ch <- receiveMessage(svc, input)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+	return ch
+}
+
+func receiveMessage(svc *sqs.SQS, input *sqs.ReceiveMessageInput) *sqs.ReceiveMessageOutput {
 
 	msgResult, err := svc.ReceiveMessage(input)
 	if err != nil {
-		c <- err
-		return
+		fmt.Printf("[err] %v", err)
+		return &sqs.ReceiveMessageOutput{}
 	}
 
 	if len(msgResult.Messages) == 0 {
-		c <- errors.New("the specified queue does not return any messages")
-		return
+		fmt.Println("the specified queue does not return any messages")
+		return &sqs.ReceiveMessageOutput{}
 	}
 
-	var stdout io.Writer = os.Stdout
-	json.NewEncoder(stdout).Encode(msgResult)
-
-	_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
-		QueueUrl:      input.QueueUrl,
-		ReceiptHandle: msgResult.Messages[0].ReceiptHandle,
-	})
-	if err != nil {
-		c <- err
-	}
+	return msgResult
 }
