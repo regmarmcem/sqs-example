@@ -72,7 +72,6 @@ func main() {
 		select {
 		case result := <-ch:
 			if len(result.Messages) == 0 {
-				fmt.Println("empty message")
 				continue
 			}
 			json.NewEncoder(stdout).Encode(result.Messages[0])
