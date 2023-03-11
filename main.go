@@ -67,7 +67,7 @@ func main() {
 
 	var stdout io.Writer = os.Stdout
 
-	ch := wrapper(svc, input)
+	ch := receiveMessageWrapper(svc, input)
 	for {
 		select {
 		case result := <-ch:
@@ -92,7 +92,7 @@ func main() {
 	}
 }
 
-func wrapper(svc *sqs.SQS, input *sqs.ReceiveMessageInput) <-chan *sqs.ReceiveMessageOutput {
+func receiveMessageWrapper(svc *sqs.SQS, input *sqs.ReceiveMessageInput) <-chan *sqs.ReceiveMessageOutput {
 	ch := make(chan *sqs.ReceiveMessageOutput)
 	go func() {
 		for {
