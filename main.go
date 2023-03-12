@@ -67,15 +67,22 @@ func main() {
 	var stdout io.Writer = os.Stdout
 
 	ch := receiveMessageWrapper(svc, input)
-	for {
+	for i := 0; i < 100; i++ {
 		select {
 		case result := <-ch:
 			if len(result.Messages) == 0 {
 				continue
 			}
 			json.NewEncoder(stdout).Encode(result.Messages[0])
+			svc.ChangeMessageVisibility(
+				&sqs.ChangeMessageVisibilityInput{
+					QueueUrl:          input.QueueUrl,
+					ReceiptHandle:     result.Messages[0].ReceiptHandle,
+					VisibilityTimeout: aws.Int64(int64(i/5+1) * 5),
+				},
+			)
 			continue
-		case <-time.After(10 * time.Second):
+		case <-time.After(20 * time.Second):
 			fmt.Println("time out")
 			return
 		}
