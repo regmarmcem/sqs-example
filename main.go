@@ -83,7 +83,7 @@ func main() {
 				fmt.Printf("[err] %v", err)
 			}
 			return
-		case <-time.After(1 * time.Second):
+		case <-time.After(10 * time.Second):
 			fmt.Println("time out")
 			return
 		}
@@ -94,8 +94,13 @@ func receiveMessageWrapper(svc *sqs.SQS, input *sqs.ReceiveMessageInput) <-chan 
 	ch := make(chan *sqs.ReceiveMessageOutput)
 	go func() {
 		for {
-			ch <- receiveMessage(svc, input)
-			time.Sleep(100 * time.Millisecond)
+			msg := receiveMessage(svc, input)
+			if len(msg.Messages) == 0 {
+				fmt.Println("message is empty")
+				time.Sleep(1000 * time.Millisecond)
+				continue
+			}
+			ch <- msg
 		}
 	}()
 	return ch
@@ -106,11 +111,6 @@ func receiveMessage(svc *sqs.SQS, input *sqs.ReceiveMessageInput) *sqs.ReceiveMe
 	msgResult, err := svc.ReceiveMessage(input)
 	if err != nil {
 		fmt.Printf("[err] %v", err)
-		return &sqs.ReceiveMessageOutput{}
-	}
-
-	if len(msgResult.Messages) == 0 {
-		fmt.Println("the specified queue does not return any messages")
 		return &sqs.ReceiveMessageOutput{}
 	}
 
