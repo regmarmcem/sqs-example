@@ -30,6 +30,7 @@ func main() {
 	queueURL := os.Getenv("QUEUE_URL")
 
 	_, err = svc.SendMessage(&sqs.SendMessageInput{
+		DelaySeconds: aws.Int64(5),
 		MessageAttributes: map[string]*sqs.MessageAttributeValue{
 			"Title": {
 				DataType:    aws.String("String"),
