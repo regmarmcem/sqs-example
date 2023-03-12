@@ -74,6 +74,11 @@ func main() {
 				continue
 			}
 			json.NewEncoder(stdout).Encode(result.Messages[0])
+			svc.ChangeMessageVisibility(&sqs.ChangeMessageVisibilityInput{
+				QueueUrl:          input.QueueUrl,
+				ReceiptHandle:     result.Messages[0].ReceiptHandle,
+				VisibilityTimeout: aws.Int64(0),
+			})
 			continue
 		case <-time.After(10 * time.Second):
 			fmt.Println("time out")
