@@ -30,7 +30,6 @@ func main() {
 	queueURL := os.Getenv("QUEUE_URL")
 
 	_, err = svc.SendMessage(&sqs.SendMessageInput{
-		DelaySeconds: aws.Int64(5),
 		MessageAttributes: map[string]*sqs.MessageAttributeValue{
 			"Title": {
 				DataType:    aws.String("String"),
@@ -75,15 +74,7 @@ func main() {
 				continue
 			}
 			json.NewEncoder(stdout).Encode(result.Messages[0])
-
-			_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
-				QueueUrl:      input.QueueUrl,
-				ReceiptHandle: result.Messages[0].ReceiptHandle,
-			})
-			if err != nil {
-				fmt.Printf("[err] %v", err)
-			}
-			return
+			continue
 		case <-time.After(10 * time.Second):
 			fmt.Println("time out")
 			return
