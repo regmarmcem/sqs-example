@@ -83,7 +83,7 @@ func main() {
 }
 
 func receiveMessageWrapper(svc *sqs.SQS, input *sqs.ReceiveMessageInput) <-chan *sqs.ReceiveMessageOutput {
-	ch := make(chan *sqs.ReceiveMessageOutput)
+	ch := make(chan *sqs.ReceiveMessageOutput, 1)
 	go func() {
 		for {
 			msg := receiveMessage(svc, input)
