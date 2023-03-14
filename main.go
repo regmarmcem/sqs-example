@@ -91,6 +91,9 @@ func main() {
 	}
 }
 
+/*
+* keep receiving message from a queue until it returns valid message
+ */
 func receiveMessageWrapper(svc *sqs.SQS, input *sqs.ReceiveMessageInput) <-chan *sqs.ReceiveMessageOutput {
 	ch := make(chan *sqs.ReceiveMessageOutput, 1)
 	go func() {
