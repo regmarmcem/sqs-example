@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -14,6 +15,10 @@ import (
 )
 
 func main() {
+	d := flag.Int("d", 0, "set delaySeconds when sendMessage API is called: defalut is 0")
+	w := flag.Int("w", 0, "wait until specified seconds: default is 0")
+
+	flag.Parse()
 	sess := session.Must(
 		session.NewSession(
 			&aws.Config{
@@ -30,7 +35,7 @@ func main() {
 	queueURL := os.Getenv("QUEUE_URL")
 
 	_, err = svc.SendMessage(&sqs.SendMessageInput{
-		DelaySeconds: aws.Int64(5),
+		DelaySeconds: aws.Int64(int64(*d)),
 		MessageAttributes: map[string]*sqs.MessageAttributeValue{
 			"Title": {
 				DataType:    aws.String("String"),
@@ -63,6 +68,7 @@ func main() {
 		QueueUrl:            &queueURL,
 		MaxNumberOfMessages: aws.Int64(1),
 		VisibilityTimeout:   aws.Int64(5),
+		WaitTimeSeconds:     aws.Int64(int64(*w)),
 	}
 
 	var stdout io.Writer = os.Stdout
